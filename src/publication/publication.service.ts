@@ -106,11 +106,96 @@ export class PublicationService {
             }
           ],
           as: "author"
+        },
+      },
+      {
+        $lookup: {
+          from: "certifications",
+          let: { author_id:  "$id_user"},
+          pipeline: [
+            {
+              $addFields: {
+                user_id:  "$id_user"
+              }
+            },
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$user_id", "$$author_id"]
+                }
+              }
+            }
+          ],
+          as: "certifications"
         }
+      },
+      {
+        $lookup: {
+          from: "profiles",
+          let: { author_id:  "$id_user"},
+          pipeline: [
+            {
+              $addFields: {
+                user_id:  "$id_user"
+              }
+            },
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$user_id", "$$author_id"]
+                }
+              }
+            }
+          ],
+          as: "profile_info"
+        }
+      },
+      {
+        $unwind: {
+          path: "$author",
+          preserveNullAndEmptyArrays: true,
+        }
+      },
+      {
+        $unwind: {
+          path: "$likes",
+          preserveNullAndEmptyArrays: true,
+        }
+      },
+      {
+        $unwind: {
+          path: "$certifications",
+          preserveNullAndEmptyArrays: true,
+        }
+      },
+      {
+        $unwind: {
+          path: "$profile_info",
+          preserveNullAndEmptyArrays: true,
+        }
+      },
+      {
+        $addFields: {
+          first_comment: { $arrayElemAt: ['$comments.text', 0] },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          id_user: 1,
+          created_at: 1,
+          updated_at: 1,
+          text: 1,
+          picture_publication: 1,
+          author_name: '$author.name',
+          author_profile_picture: { $ifNull: ['$profile_info.profile_picture', 'blank_profile_image']},
+          likes: { $ifNull: ['$likes.like_amount', 0]},
+          first_comment: 1,
+          certified_publication: '$certifications.valid_certification',
+          certificated_user: 1,
+        },
       }
     ]).exec();
-
-    console.log("Publications with Comments:", publications);
 
     return publications;
   }
