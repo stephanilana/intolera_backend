@@ -3,11 +3,12 @@ import { CreatePublicationDto } from "./dto/create-publication.dto";
 import { UpdatePublicationDto } from "./dto/update-publication.dto";
 import { InjectModel } from "@nestjs/mongoose";
 import { Publication, PublicationDocument } from "./entities/publication.entity";
+import { UsersService } from "src/users/users.service";
 import { Model } from "mongoose";
 
 @Injectable()
 export class PublicationService {
-  constructor(@InjectModel(Publication.name) private publicationModel: Model<PublicationDocument>) {}
+  constructor(@InjectModel(Publication.name) private publicationModel: Model<PublicationDocument>, private usersService: UsersService) {}
   async create(createPublicationDto: CreatePublicationDto): Promise<Publication> {
     return new this.publicationModel({
       ...createPublicationDto,
@@ -17,13 +18,46 @@ export class PublicationService {
     }).save();
   }
 
-  async findAll(): Promise<Publication[]> {
-    return this.publicationModel
-      .find({
-        deleted_at: "",
-      })
-      .sort({ created_at: -1 })
+  async findTimeline(userId: string): Promise<Publication[]> {
+    const certifiedUsers = await this.usersService.findAllCertifiedUsers();
+    const followedUsers = await this.usersService.findAllFollowedUsers(userId);
+
+    const timelineUsersIds = certifiedUsers.concat(followedUsers);
+
+    const parsedIds = timelineUsersIds.map(user => user["_id"].toString());
+
+    const publications = await this.publicationModel
+      .aggregate([
+        {
+          $match: {
+            id_user: { $in: parsedIds },
+            deleted_at: "",
+          },
+        },
+        {
+          $sort: { created_at: -1 },
+        },
+        {
+          $lookup: {
+            from: "publicationlikes",
+            localField: "_id",
+            foreignField: "id_publication",
+            as: "teste",
+          },
+        },
+        {
+          $addFields: {
+            "users_info.name": 1, // Exemplo de campo calculado
+            "teste._id": 1, // Exemplo de campo calculado
+            first_comment: "static_value", // Exemplo de valor estático
+          },
+        },
+      ])
       .exec();
+
+    console.log("Publications with Comments:", publications);
+
+    return publications;
   }
 
   async findByUserId(userid: string): Promise<Publication[]> {

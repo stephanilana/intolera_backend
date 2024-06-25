@@ -4,6 +4,8 @@ import { User, UserSchema } from "./entities/user.entity";
 import { UsersController } from "./users.controller";
 import { UsersService } from "./users.service";
 import { JwtModule } from "@nestjs/jwt";
+import { CertificationModule } from "src/certification/certification.module";
+import { FollowerModule } from "src/follower/follower.module";
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { JwtModule } from "@nestjs/jwt";
         signOptions: { expiresIn: "7d" },
       }),
     }),
+    CertificationModule,
+    FollowerModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

@@ -7,10 +7,18 @@ import { Model } from "mongoose";
 import { hash } from "bcrypt";
 import { ReturnUserDto } from "./dto/return-user.dto";
 import { JwtService } from "@nestjs/jwt";
+import { CertificationService } from "src/certification/certification.service";
+import { FollowerService } from "src/follower/follower.service";
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>, private jwtService: JwtService) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private jwtService: JwtService,
+    private certificationService: CertificationService,
+    private followerService: FollowerService,
+  ) {}
+
   async create(createUserDto: CreateUserDto): Promise<User> {
     const userEmail = await this.findUserByEmail(createUserDto.email).catch(() => undefined);
     if (userEmail) {
@@ -27,18 +35,36 @@ export class UsersService {
     }).save();
     return user;
   }
+
   async findAll(): Promise<User[]> {
     return this.userModel.find({
       deleted_at: "",
     });
   }
 
-  async findByName(name: string): Promise<User[]> {
-    return this.userModel.find({
-      name: name,
-      deleted_at: "",
-    });
+  async findAllCertifiedUsers(): Promise<User[]> {
+    const validCertifications = await this.certificationService.findAllValidCertifications();
+    const certifiedUserIds = validCertifications.map(certification => certification.id_user);
+
+    return this.userModel.find({ _id: { $in: certifiedUserIds } }).exec();
   }
+
+  async findAllFollowedUsers(userId: string): Promise<User[]> {
+    const followedUsersRelations = await this.followerService.findAllAcepted(userId);
+    const followedUsersIds = followedUsersRelations.map(followedRelations => followedRelations.id_user_follower);
+
+    return this.userModel.find({ _id: { $in: followedUsersIds } }).exec();
+  }
+
+  async findByName(name: string): Promise<User[]> {
+    return this.userModel
+      .find({
+        name: new RegExp(name, "i"),
+        deleted_at: "",
+      })
+      .limit(5);
+  }
+
   async findUserByToken(token: string): Promise<ReturnUserDto> {
     try {
       const decodedToken = this.jwtService.decode(token);

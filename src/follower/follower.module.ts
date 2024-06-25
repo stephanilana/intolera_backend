@@ -8,5 +8,6 @@ import { Follower, FollowerSchema } from "./entities/follower.entity";
   imports: [MongooseModule.forFeature([{ name: Follower.name, schema: FollowerSchema }])],
   controllers: [FollowerController],
   providers: [FollowerService],
+  exports: [FollowerService],
 })
 export class FollowerModule {}

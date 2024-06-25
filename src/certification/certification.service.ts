@@ -8,6 +8,7 @@ import { Model } from "mongoose";
 @Injectable()
 export class CertificationService {
   constructor(@InjectModel(Certification.name) private certificationModel: Model<CertificationDocument>) {}
+
   async create(createCertificationDto: CreateCertificationDto): Promise<Certification> {
     return new this.certificationModel({
       ...createCertificationDto,
@@ -16,10 +17,20 @@ export class CertificationService {
       deleted_at: "",
     }).save();
   }
+
   async findAll(): Promise<Certification[]> {
     return this.certificationModel.find({
       deleted_at: "",
     });
+  }
+
+  async findAllValidCertifications(): Promise<Certification[]> {
+    const validCertifications = this.certificationModel.find({
+      valid_certification: true,
+      deleted_at: "",
+    });
+
+    return validCertifications;
   }
 
   async findOneById(id: string): Promise<Certification> {

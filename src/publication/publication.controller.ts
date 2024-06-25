@@ -15,9 +15,9 @@ export class PublicationController {
     return await this.publicationService.create(createPublicationDto);
   }
 
-  @Get()
-  async findAll(): Promise<Publication[]> {
-    return await this.publicationService.findAll();
+  @Get("timeline/:userId")
+  async findAll(@Param("userId") userId: string): Promise<Publication[]> {
+    return await this.publicationService.findTimeline(userId);
   }
 
   @Get(":userId/user-id")

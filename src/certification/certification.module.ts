@@ -8,5 +8,6 @@ import { Certification, CertificationSchema } from "./entities/certification.ent
   imports: [MongooseModule.forFeature([{ name: Certification.name, schema: CertificationSchema }])],
   controllers: [CertificationController],
   providers: [CertificationService],
+  exports: [CertificationService],
 })
 export class CertificationModule {}
