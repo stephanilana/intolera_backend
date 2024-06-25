@@ -12,6 +12,7 @@ export class CertificationService {
   async create(createCertificationDto: CreateCertificationDto): Promise<Certification> {
     return new this.certificationModel({
       ...createCertificationDto,
+      valid_certification: false,
       created_at: new Date().toString(),
       updated_at: new Date().toString(),
       deleted_at: "",
