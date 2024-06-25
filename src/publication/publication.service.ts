@@ -26,34 +26,89 @@ export class PublicationService {
 
     const parsedIds = timelineUsersIds.map(user => user["_id"].toString());
 
-    const publications = await this.publicationModel
-      .aggregate([
-        {
-          $match: {
-            id_user: { $in: parsedIds },
-            deleted_at: "",
-          },
+    const publications = await this.publicationModel.aggregate([
+      {
+        $match: {
+          id_user: { $in: parsedIds },
+          deleted_at: "",
         },
-        {
-          $sort: { created_at: -1 },
-        },
-        {
-          $lookup: {
-            from: "publicationlikes",
-            localField: "_id",
-            foreignField: "id_publication",
-            as: "teste",
-          },
-        },
-        {
-          $addFields: {
-            "users_info.name": 1, // Exemplo de campo calculado
-            "teste._id": 1, // Exemplo de campo calculado
-            first_comment: "static_value", // Exemplo de valor estático
-          },
-        },
-      ])
-      .exec();
+      },
+      {
+        $sort: { created_at: -1 },
+      },
+      {
+        $lookup: {
+          from: "comments",
+          let: { publication_id: "$_id" },
+          pipeline: [
+            {
+              $addFields: {
+                id_publication: {
+                  $toObjectId: "$id_publication"
+                }
+              }
+            },
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$id_publication", "$$publication_id"]
+                }
+              }
+            }
+          ],
+          as: "comments"
+        }
+      },
+      {
+        $lookup: {
+          from: "publicationlikes",
+          let: { publication_id: "$_id" },
+          pipeline: [
+            {
+              $addFields: {
+                id_publication_likes: {
+                  $toObjectId: "$id_publication"
+                }
+              }
+            },
+            {
+              $match: {
+                $expr: {
+                  $eq: [
+                    "$id_publication_likes",
+                    "$$publication_id"
+                  ]
+                }
+              }
+            }
+          ],
+          as: "likes"
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: { author_id: {
+            $toObjectId: "$id_user"
+          } },
+          pipeline: [
+            {
+              $addFields: {
+                user_id:  "$_id"
+              }
+            },
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$user_id", "$$author_id"]
+                }
+              }
+            }
+          ],
+          as: "author"
+        }
+      }
+    ]).exec();
 
     console.log("Publications with Comments:", publications);
 
