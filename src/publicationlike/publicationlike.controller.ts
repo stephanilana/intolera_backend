@@ -22,10 +22,14 @@ export class PublicationlikeController {
   async findById(@Param("id") id: string): Promise<Publicationlike> {
     return await this.publicationlikeService.findOneById(id);
   }
+  @Get(":id/publication")
+  async findByPubicationId(@Param("id") id: string): Promise<Publicationlike> {
+    return await this.publicationlikeService.findOneByPublicationId(id);
+  }
 
-  @Patch(":id")
-  async update(@Param("id") id: string, @Body() updatePublicationlikeDto: UpdatePublicationlikeDto): Promise<Publicationlike> {
-    return await this.publicationlikeService.update(id, updatePublicationlikeDto);
+  @Patch(":id/:like")
+  async update(@Param("id") id: string, @Param("like") like: string, @Body() updatePublicationlikeDto: UpdatePublicationlikeDto): Promise<Publicationlike> {
+    return await this.publicationlikeService.update(id, updatePublicationlikeDto, like);
   }
 
   @Delete(":id")

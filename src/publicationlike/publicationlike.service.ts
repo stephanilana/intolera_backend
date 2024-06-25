@@ -9,13 +9,14 @@ import { Model } from "mongoose";
 export class PublicationlikeService {
   constructor(@InjectModel(Publicationlike.name) private publicationLikeModel: Model<PublicationlikeDocument>) {}
   async create(createPublicationlikeDto: CreatePublicationlikeDto): Promise<Publicationlike> {
-    return new this.publicationLikeModel({
+      return await new this.publicationLikeModel({
       ...createPublicationlikeDto,
-      amount: +1, //TODO: validar como vai ser gravado
+      like_amount: +1, //TODO: validar como vai ser gravado
       created_at: new Date().toString(),
       updated_at: new Date().toString(),
       deleted_at: "",
     }).save();
+    
   }
   async findAll(): Promise<Publicationlike[]> {
     return this.publicationLikeModel.find({
@@ -30,15 +31,29 @@ export class PublicationlikeService {
     }
     return publicationLike;
   }
+  async findOneByPublicationId(id: string): Promise<Publicationlike> {
+    const publicationLike = await this.publicationLikeModel.findOne({
+      id_publication: id
+    });
+    if (!publicationLike || publicationLike.deleted_at != "") {
+      throw new NotFoundException("Publication like not found");
+    }
+    return publicationLike;
+  }
 
-  async update(id: string, updatePublicationlikeDto: UpdatePublicationlikeDto): Promise<Publicationlike> {
-    await this.findOneById(id);
+  async update(id: string, updatePublicationlikeDto: UpdatePublicationlikeDto, like: string): Promise<Publicationlike> {
+    const ret = await this.findOneById(id);
+    let amount = ret.like_amount - 1;    
+    if(like == 'T'){
+       amount = ret.like_amount + 1;
+    }
     return this.publicationLikeModel.findByIdAndUpdate(
       {
         _id: id,
       },
       {
         $set: updatePublicationlikeDto,
+        like_amount: amount,
         updated_at: new Date().toString(),
       },
       {
