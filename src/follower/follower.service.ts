@@ -33,11 +33,109 @@ export class FollowerService {
   }
 
   async findAllUnaccepted(userid: string): Promise<Follower[]> {
-    return this.followerModel.find({
-      id_user_followed: userid,
-      acepted: false,
-      deleted_at: "",
-    });
+    const followers = await this.followerModel.aggregate([
+      {
+        $match: {
+          id_user_followed: userid,
+          acepted: false,
+          deleted_at: ""
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          let: { follower_id: "$id_user_follower" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$_id", { $toObjectId: "$$follower_id" }]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                userId: "$_id",
+                name: "$name"
+              }
+            }
+          ],
+          as: 'user_details'
+        }
+      },
+      {
+        $lookup: {
+          from: 'profiles',
+          let: { follower_id: "$id_user_follower" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$userId", { $toObjectId: "$$follower_id" }]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                profile_picture: "$profile_picture"
+              }
+            }
+          ],
+          as: 'profile_details'
+        }
+      },
+      {
+        $lookup: {
+          from: "certifications",
+          let: { follower_id:  "$id_user_follower"},
+          pipeline: [
+            {
+              $addFields: {
+                user_id:  "$id_user"
+              }
+            },
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$user_id", "$$follower_id"]
+                }
+              }
+            }
+          ],
+          as: "certifications"
+        }
+      },
+      {
+        $unwind: {
+          path: "$user_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $unwind: {
+          path: "$profile_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $unwind: {
+          path: "$certifications",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          userId: "$user_details.userId",
+          name: "$user_details.name",
+          profile_picture: { $ifNull: ["$profile_details.profile_picture", "blank_profile_image"] },
+          certificated: { $ifNull: ["$certifications.valid_certification", false] }
+        }
+      }
+    ]).exec();
+  
+    return followers;
   }
 
   async findOneById(id: string): Promise<Follower> {
