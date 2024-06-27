@@ -23,13 +23,55 @@ export class CommentService {
   }
 
   async findByPiblicationId(id: string): Promise<Comment[]> {
-    return this.commentModel
-      .find({
-        id_publication: id,
-        deleted_at: "",
-      })
-      .sort({ created_at: -1 })
-      .exec();
+    return this.commentModel.aggregate([
+      {
+        $match: {
+          id_publication: id,
+          deleted_at: ""
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          let: { id_user: "$id_user" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$_id", { $toObjectId: "$$id_user" }]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                userId: "$_id",
+                name: "$name"
+              }
+            }
+          ],
+          as: 'user_details'
+        }
+      },
+      {
+        $unwind: {
+          path: "$user_details",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          _id: 1, // Inclui o ID do comentário
+          id_publication: 1,
+          id_user: 1,
+          name: "$user_details.name",
+          text: 1,
+          created_at: 1,
+          updated_at: 1,
+          deleted_at: 1
+        }
+      }
+    ]).sort({ created_at: -1 }).exec();
   }
 
   async findOneById(id: string): Promise<Comment> {

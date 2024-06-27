@@ -18,7 +18,7 @@ export class CommentController {
     return await this.commentService.findAll();
   }
 
-  @Get(":publicationId")
+  @Get(":publicationId/publication")
   async findByPublicationId(@Param("publicationId") publicationId: string): Promise<Comment[]> {
     return await this.commentService.findByPiblicationId(publicationId);
   }
