@@ -176,7 +176,9 @@ export class PublicationService {
       },
       {
         $addFields: {
-          first_comment: { $arrayElemAt: ['$comments.text', 0] },
+          first_comment: {
+            $ifNull: [{ $arrayElemAt: ['$comments.text', 0] }, " "]
+          }
         },
       },
       {
