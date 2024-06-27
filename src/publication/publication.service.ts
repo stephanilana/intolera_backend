@@ -192,6 +192,7 @@ export class PublicationService {
           author_name: '$author.name',
           author_profile_picture: { $ifNull: ['$profile_info.profile_picture', 'blank_profile_image']},
           likes: { $ifNull: ['$likes.like_amount', 0]},
+          name_user_comment: " ",
           first_comment: 1,
           certified_publication: '$certifications.valid_certification',
           certificated_user: 1,
