@@ -26,13 +26,14 @@ export class UsersService {
   async create(createUserDto: CreateUserDto): Promise<User> {
     const session = await this.connection.startSession();
     session.startTransaction();
-    const userEmail = await this.findUserByEmail(createUserDto.email).catch(() => undefined);
-    if (userEmail) {
-      throw new BadGatewayException("Email já registrado no sistema");
-    }
-    const saltOrRounds = 10;
-    const passwordHashed = await hash(createUserDto.password, saltOrRounds);
+
     try {
+      const userEmail = await this.findUserByEmail(createUserDto.email).catch(() => undefined);
+      if (userEmail) {
+        throw new BadGatewayException("Email já registrado no sistema");
+      }
+      const saltOrRounds = 10;
+      const passwordHashed = await hash(createUserDto.password, saltOrRounds);
       const user = await new this.userModel({
         ...createUserDto,
         password: passwordHashed,
