@@ -6,6 +6,7 @@ import { UsersService } from "./users.service";
 import { JwtModule } from "@nestjs/jwt";
 import { CertificationModule } from "src/certification/certification.module";
 import { FollowerModule } from "src/follower/follower.module";
+import { ProfileModule } from "src/profile/profile.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { FollowerModule } from "src/follower/follower.module";
     }),
     CertificationModule,
     FollowerModule,
+    ProfileModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

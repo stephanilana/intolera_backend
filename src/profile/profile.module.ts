@@ -8,5 +8,6 @@ import { Profile, ProfileSchema } from "./entities/profile.entity";
   imports: [MongooseModule.forFeature([{ name: Profile.name, schema: ProfileSchema }])],
   controllers: [ProfileController],
   providers: [ProfileService],
+  exports: [ProfileService, MongooseModule],
 })
 export class ProfileModule {}
