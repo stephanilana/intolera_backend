@@ -42,8 +42,8 @@ export class UsersService {
       }).save({ session });
       let profieDto = new CreateProfileDto();
       profieDto.id_user = user._id.toString();
-      profieDto.description = " ";
-      profieDto.profile_picture = " ";
+      profieDto.description = "";
+      profieDto.profile_picture = "";
 
       const profile = await this.profileService.create(profieDto);
 
