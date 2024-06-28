@@ -81,10 +81,54 @@ export class UsersService {
 
   async findByName(name: string): Promise<User[]> {
     return this.userModel
-      .find({
-        name: new RegExp(name, "i"),
-        deleted_at: "",
-      })
+      .aggregate([
+        {
+          $match: {
+            name: new RegExp(name, "i"),
+            deleted_at: "",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            let: { author_id: "$id_user" },
+            pipeline: [
+              {
+                $addFields: {
+                  user_id: "$id_user",
+                },
+              },
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$user_id", "$$author_id"],
+                  },
+                },
+              },
+            ],
+            as: "profile_info",
+          },
+        },
+        {
+          $unwind: {
+            path: "$profile_info",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            id_user: 1,
+            name: 1,
+            email: 1,
+            certificate: 1,
+            password: 1,
+            created_at: 1,
+            updated_at: 1,
+            profile_picture: { $ifNull: ["$profile_info.profile_picture", "blank_profile_image"] },
+          },
+        },
+      ])
       .limit(5);
   }
 
