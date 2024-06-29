@@ -135,14 +135,20 @@ export class UsersService {
   async findUserByToken(token: string): Promise<ReturnUserDto> {
     try {
       const decodedToken = this.jwtService.decode(token);
-      return await this.findOneById(decodedToken["id"]);
+      const user = await this.findOneById(decodedToken["id"]);
+
+      if (!user) {
+        return null;
+      }
+
+      return new ReturnUserDto(user.id, user.email, user.name, user.certificate);
     } catch (error) {
       return null;
     }
   }
 
   async findOneById(id: string): Promise<User> {
-    const user = await this.userModel.findById(id);
+    const user = await this.userModel.findById(id).exec();
     if (!user || user.deleted_at != "") {
       throw new NotFoundException("User not found");
     }
