@@ -4,6 +4,7 @@ import { CreateProfileDto } from "./dto/create-profile.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { Profile } from "./entities/profile.entity";
 import { JwtAuthGuard } from "src/auth/jwt-auth.guard";
+import { VisitProfileDto } from "./dto/visit-profile.dto";
 
 @Controller("profile")
 export class ProfileController {
@@ -19,6 +20,12 @@ export class ProfileController {
   @Get()
   async findAll(): Promise<Profile[]> {
     return await this.profileService.findAll();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("/visit")
+  async visit(@Body() visitProfileDto: VisitProfileDto): Promise<string> {
+    return await this.profileService.visitUser(visitProfileDto);
   }
 
   @UseGuards(JwtAuthGuard)
