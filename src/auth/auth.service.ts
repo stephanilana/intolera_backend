@@ -12,11 +12,13 @@ export class AuthService {
   constructor(private readonly usersService: UsersService, private jwtService: JwtService) {}
 
   async signIn(loginDto: LoginDto): Promise<ReturnLoginDto> {
+    
     const user = await this.usersService.findUserByEmail(loginDto.email).catch(() => undefined);
     const isMatch = await compare(loginDto.password, user?.password || "");
     if (!user || !isMatch) {
       throw new NotFoundException("Email ou senha inválidos");
     }
+
     const userReturn = new ReturnUserDto(user._id.toString(), user.email, user.name, user.certificate);
 
     return {
