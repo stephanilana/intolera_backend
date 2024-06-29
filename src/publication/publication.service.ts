@@ -158,12 +158,6 @@ export class PublicationService {
       },
       {
         $unwind: {
-          path: "$likes",
-          preserveNullAndEmptyArrays: true,
-        }
-      },
-      {
-        $unwind: {
           path: "$certifications",
           preserveNullAndEmptyArrays: true,
         }
@@ -182,6 +176,11 @@ export class PublicationService {
         },
       },
       {
+        $addFields: {
+          likes: { $size: "$likes" }
+        },
+      },
+      {
         $project: {
           _id: 1,
           id_user: 1,
@@ -191,7 +190,7 @@ export class PublicationService {
           picture_publication: 1,
           author_name: '$author.name',
           author_profile_picture: { $ifNull: ['$profile_info.profile_picture', 'blank_profile_image']},
-          likes: { $ifNull: ['$likes.like_amount', 0]},
+          likes: 1,
           name_user_comment: " ",
           first_comment: 1,
           certified_publication: '$certifications.valid_certification',

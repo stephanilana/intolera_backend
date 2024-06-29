@@ -9,7 +9,7 @@ export class Publicationlike {
   id_publication: string;
 
   @Prop()
-  like_amount: number;
+  id_user: string;
 
   @Prop()
   created_at: string;

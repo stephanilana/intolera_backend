@@ -34,14 +34,8 @@ export class PublicationlikeController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch(":id/:like")
-  async update(@Param("id") id: string, @Param("like") like: string, @Body() updatePublicationlikeDto: UpdatePublicationlikeDto): Promise<Publicationlike> {
-    return await this.publicationlikeService.update(id, updatePublicationlikeDto, like);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Delete(":id")
   async remove(@Param("id") id: string): Promise<Publicationlike> {
-    return await this.publicationlikeService.remove(id);
+    return await this.publicationlikeService.changeStatus(id);
   }
 }

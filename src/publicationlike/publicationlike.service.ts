@@ -4,20 +4,33 @@ import { UpdatePublicationlikeDto } from "./dto/update-publicationlike.dto";
 import { InjectModel } from "@nestjs/mongoose";
 import { Publicationlike, PublicationlikeDocument } from "./entities/publicationlike.entity";
 import { Model } from "mongoose";
+import { UsersService } from "src/users/users.service";
 
 @Injectable()
 export class PublicationlikeService {
-  constructor(@InjectModel(Publicationlike.name) private publicationLikeModel: Model<PublicationlikeDocument>) {}
-  async create(createPublicationlikeDto: CreatePublicationlikeDto): Promise<Publicationlike> {
-      return await new this.publicationLikeModel({
-      ...createPublicationlikeDto,
-      like_amount: +1, //TODO: validar como vai ser gravado
-      created_at: new Date().toString(),
-      updated_at: new Date().toString(),
-      deleted_at: "",
-    }).save();
+  constructor(
+    @InjectModel(Publicationlike.name) private publicationLikeModel: Model<PublicationlikeDocument>,
+    private readonly userService: UsersService
+    ) {}
+  
+    async create(createPublicationlikeDto: CreatePublicationlikeDto): Promise<Publicationlike> {
     
+      const alreadyLiked = await this.findPublicationByIdAndUserId(createPublicationlikeDto);
+
+      if (alreadyLiked) {
+        await this.changeStatus(createPublicationlikeDto.id_publication);
+
+        return;
+      } else {
+        return await new this.publicationLikeModel({
+          ...createPublicationlikeDto,
+          created_at: new Date().toString(),
+          updated_at: new Date().toString(),
+          deleted_at: "",
+        }).save();
+      }
   }
+
   async findAll(): Promise<Publicationlike[]> {
     return this.publicationLikeModel.find({
       deleted_at: "",
@@ -31,52 +44,47 @@ export class PublicationlikeService {
     }
     return publicationLike;
   }
+
   async findOneByPublicationId(id: string): Promise<Publicationlike> {
     const publicationLike = await this.publicationLikeModel.findOne({
       id_publication: id
     });
-    if (!publicationLike || publicationLike.deleted_at != "") {
-      throw new NotFoundException("Publication like not found");
-    }
+
     return publicationLike;
   }
 
-  async update(id: string, updatePublicationlikeDto: UpdatePublicationlikeDto, like: string): Promise<Publicationlike> {
-    const ret = await this.findOneById(id);
-    let amount = ret.like_amount - 1;    
-    if(like == 'T'){
-       amount = ret.like_amount + 1;
-    }
-    return this.publicationLikeModel.findByIdAndUpdate(
-      {
-        _id: id,
-      },
-      {
-        $set: updatePublicationlikeDto,
-        like_amount: amount,
-        updated_at: new Date().toString(),
-      },
-      {
-        new: true,
-      },
-    );
+  async findPublicationByIdAndUserId(createPublicationlikeDto: CreatePublicationlikeDto): Promise<Publicationlike> {
+    return await this.publicationLikeModel.findOne({
+      id_publication: createPublicationlikeDto.id_publication,
+      id_user: createPublicationlikeDto.id_user
+    });
   }
 
-  async remove(id: string): Promise<Publicationlike> {
-    const publicationLike = await this.findOneById(id);
+  async changeStatus(publicationId: string): Promise<Publicationlike> {
+    const publicationLike = await this.findOneByPublicationId(publicationId);
 
-    publicationLike.updated_at = new Date().toString();
+    if (publicationLike.deleted_at != '') {
+      return this.publicationLikeModel.findByIdAndUpdate(
+        publicationLike['_id'],
+        {
+          deleted_at: '',
+          updated_at: new Date(),
+        },
+        {
+          new: true,
+        }
+      );
+    }
+
     return this.publicationLikeModel.findByIdAndUpdate(
+      publicationLike['_id'],
       {
-        _id: id,
-      },
-      {
-        deleted_at: new Date().toString(),
-        updated_at: new Date().toString(),
+        deleted_at: new Date(),
+        updated_at: new Date(),
       },
       {
         new: true,
-      },
+      }
     );
   }
 }
