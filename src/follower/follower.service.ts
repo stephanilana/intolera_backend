@@ -9,6 +9,14 @@ import { Model } from "mongoose";
 export class FollowerService {
   constructor(@InjectModel(Follower.name) private followerModel: Model<FollowerDocument>) {}
   async create(createFollowerDto: CreateFollowerDto): Promise<Follower> {
+    const userFollowed = await this.findOneByUsersId(createFollowerDto);
+
+    if (userFollowed) {
+      await this.deleteById(userFollowed['_id']);
+
+      return;
+    }
+
     return new this.followerModel({
       ...createFollowerDto,
       acepted: false,
@@ -144,6 +152,25 @@ export class FollowerService {
       throw new NotFoundException("Follower not found");
     }
     return follower;
+  }
+
+  async findOneByUsersId(createFollowerDto): Promise<Follower> {
+    const follower = await this.followerModel.findOne({
+      id_user_follower: createFollowerDto.id_user_follower,
+      id_user_followed: createFollowerDto.id_user_followed
+    });
+
+    if (!follower || follower.deleted_at != "") {
+      return;
+    }
+
+    return follower;
+  }
+
+  async deleteById(id: string): Promise<void> {
+    await this.followerModel.findByIdAndDelete(id)
+
+    return;
   }
 
   async update(id: string, updateFollowerDto: UpdateFollowerDto): Promise<Follower> {
