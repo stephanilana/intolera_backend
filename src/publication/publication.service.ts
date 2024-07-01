@@ -12,6 +12,7 @@ export class PublicationService {
   async create(createPublicationDto: CreatePublicationDto): Promise<Publication> {
     return new this.publicationModel({
       ...createPublicationDto,
+      certificated_user: false,
       created_at: new Date().toString(),
       updated_at: new Date().toString(),
       deleted_at: "",
@@ -26,178 +27,179 @@ export class PublicationService {
 
     const parsedIds = timelineUsersIds.map(user => user["_id"].toString());
 
-    const publications = await this.publicationModel.aggregate([
-      {
-        $match: {
-          id_user: { $in: parsedIds },
-          deleted_at: "",
+    const publications = await this.publicationModel
+      .aggregate([
+        {
+          $match: {
+            id_user: { $in: parsedIds },
+            deleted_at: "",
+          },
         },
-      },
-      {
-        $sort: { created_at: -1 },
-      },
-      {
-        $lookup: {
-          from: "comments",
-          let: { publication_id: "$_id" },
-          pipeline: [
-            {
-              $addFields: {
-                id_publication: {
-                  $toObjectId: "$id_publication"
-                }
-              }
-            },
-            {
-              $match: {
-                $expr: {
-                  $eq: ["$id_publication", "$$publication_id"]
-                }
-              }
-            }
-          ],
-          as: "comments"
-        }
-      },
-      {
-        $lookup: {
-          from: "publicationlikes",
-          let: { publication_id: "$_id" },
-          pipeline: [
-            {
-              $addFields: {
-                id_publication_likes: {
-                  $toObjectId: "$id_publication"
-                }
-              }
-            },
-            {
-              $match: {
-                $expr: {
-                  $eq: [
-                    "$id_publication_likes",
-                    "$$publication_id"
-                  ]
-                }
-              }
-            }
-          ],
-          as: "likes"
-        }
-      },
-      {
-        $lookup: {
-          from: "users",
-          let: { author_id: {
-            $toObjectId: "$id_user"
-          } },
-          pipeline: [
-            {
-              $addFields: {
-                user_id:  "$_id"
-              }
-            },
-            {
-              $match: {
-                $expr: {
-                  $eq: ["$user_id", "$$author_id"]
-                }
-              }
-            }
-          ],
-          as: "author"
+        {
+          $sort: { created_at: -1 },
         },
-      },
-      {
-        $lookup: {
-          from: "certifications",
-          let: { author_id:  "$id_user"},
-          pipeline: [
-            {
-              $addFields: {
-                user_id:  "$id_user"
-              }
+        {
+          $lookup: {
+            from: "comments",
+            let: { publication_id: "$_id" },
+            pipeline: [
+              {
+                $addFields: {
+                  id_publication: {
+                    $toObjectId: "$id_publication",
+                  },
+                },
+              },
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$id_publication", "$$publication_id"],
+                  },
+                },
+              },
+            ],
+            as: "comments",
+          },
+        },
+        {
+          $lookup: {
+            from: "publicationlikes",
+            let: { publication_id: "$_id" },
+            pipeline: [
+              {
+                $addFields: {
+                  id_publication_likes: {
+                    $toObjectId: "$id_publication",
+                  },
+                },
+              },
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$id_publication_likes", "$$publication_id"],
+                  },
+                },
+              },
+            ],
+            as: "likes",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            let: {
+              author_id: {
+                $toObjectId: "$id_user",
+              },
             },
-            {
-              $match: {
-                $expr: {
-                  $eq: ["$user_id", "$$author_id"]
-                }
-              }
-            }
-          ],
-          as: "certifications"
-        }
-      },
-      {
-        $lookup: {
-          from: "profiles",
-          let: { author_id:  "$id_user"},
-          pipeline: [
-            {
-              $addFields: {
-                user_id:  "$id_user"
-              }
+            pipeline: [
+              {
+                $addFields: {
+                  user_id: "$_id",
+                },
+              },
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$user_id", "$$author_id"],
+                  },
+                },
+              },
+            ],
+            as: "author",
+          },
+        },
+        {
+          $lookup: {
+            from: "certifications",
+            let: { author_id: "$id_user" },
+            pipeline: [
+              {
+                $addFields: {
+                  user_id: "$id_user",
+                },
+              },
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$user_id", "$$author_id"],
+                  },
+                },
+              },
+            ],
+            as: "certifications",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            let: { author_id: "$id_user" },
+            pipeline: [
+              {
+                $addFields: {
+                  user_id: "$id_user",
+                },
+              },
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$user_id", "$$author_id"],
+                  },
+                },
+              },
+            ],
+            as: "profile_info",
+          },
+        },
+        {
+          $unwind: {
+            path: "$author",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $unwind: {
+            path: "$certifications",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $unwind: {
+            path: "$profile_info",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $addFields: {
+            first_comment: {
+              $ifNull: [{ $arrayElemAt: ["$comments.text", 0] }, " "],
             },
-            {
-              $match: {
-                $expr: {
-                  $eq: ["$user_id", "$$author_id"]
-                }
-              }
-            }
-          ],
-          as: "profile_info"
-        }
-      },
-      {
-        $unwind: {
-          path: "$author",
-          preserveNullAndEmptyArrays: true,
-        }
-      },
-      {
-        $unwind: {
-          path: "$certifications",
-          preserveNullAndEmptyArrays: true,
-        }
-      },
-      {
-        $unwind: {
-          path: "$profile_info",
-          preserveNullAndEmptyArrays: true,
-        }
-      },
-      {
-        $addFields: {
-          first_comment: {
-            $ifNull: [{ $arrayElemAt: ['$comments.text', 0] }, " "]
-          }
+          },
         },
-      },
-      {
-        $addFields: {
-          likes: { $size: "$likes" }
+        {
+          $addFields: {
+            likes: { $size: "$likes" },
+          },
         },
-      },
-      {
-        $project: {
-          _id: 1,
-          id_user: 1,
-          created_at: 1,
-          updated_at: 1,
-          text: 1,
-          picture_publication: 1,
-          author_name: '$author.name',
-          author_profile_picture: { $ifNull: ['$profile_info.profile_picture', 'blank_profile_image']},
-          likes: 1,
-          name_user_comment: " ",
-          first_comment: 1,
-          certified_publication: '$certifications.valid_certification',
-          certificated_user: 1,
+        {
+          $project: {
+            _id: 1,
+            id_user: 1,
+            created_at: 1,
+            updated_at: 1,
+            text: 1,
+            picture_publication: 1,
+            author_name: "$author.name",
+            author_profile_picture: { $ifNull: ["$profile_info.profile_picture", "blank_profile_image"] },
+            likes: 1,
+            name_user_comment: " ",
+            first_comment: 1,
+            certified_publication: "$certifications.valid_certification",
+            certificated_user: 1,
+          },
         },
-      }
-    ]).exec();
+      ])
+      .exec();
 
     return publications;
   }
