@@ -11,6 +11,7 @@ import { CertificationService } from "src/certification/certification.service";
 import { FollowerService } from "src/follower/follower.service";
 import { ProfileService } from "src/profile/profile.service";
 import { CreateProfileDto } from "src/profile/dto/create-profile.dto";
+import { CreateCertificationDto } from "src/certification/dto/create-certification.dto";
 
 @Injectable()
 export class UsersService {
@@ -45,9 +46,13 @@ export class UsersService {
       profieDto.id_user = user._id.toString();
       profieDto.description = "";
       profieDto.profile_picture = "";
-
-      const profile = await this.profileService.create(profieDto);
-
+      if (createUserDto.certificate) {
+        let certificationDto = new CreateCertificationDto();
+        certificationDto.id_user = user._id.toString();
+        certificationDto.certification = createUserDto.certificate;
+        await this.certificationService.create(certificationDto);
+      }
+      await this.profileService.create(profieDto);
       await session.commitTransaction();
       session.endSession();
 
