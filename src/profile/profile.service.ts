@@ -24,97 +24,96 @@ export class ProfileService {
   }
 
   async visitUser(visitProfileDto: VisitProfileDto): Promise<any> {
-    const visitedUserProfile = await this.profileModel.aggregate([
-      {
-        $match: {
-          id_user: visitProfileDto.id_visited_user,
-          deleted_at: "",
+    const visitedUserProfile = await this.profileModel
+      .aggregate([
+        {
+          $match: {
+            id_user: visitProfileDto.id_visited_user,
+            deleted_at: "",
+          },
         },
-      },
-      {
-        $sort: { created_at: -1 },
-      },
-      {
-        $lookup: {
-          from: "users",
-          let: { author_id: { $toObjectId: "$id_user" } },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $eq: ["$_id", "$$author_id"],
+        {
+          $sort: { created_at: -1 },
+        },
+        {
+          $lookup: {
+            from: "users",
+            let: { author_id: { $toObjectId: "$id_user" } },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$_id", "$$author_id"],
+                  },
                 },
               },
-            },
-            {
-              $project: {
-                _id: 1,
-                name: 1,
-                email: 1,
-                certificate: 1,
-              }
-            }
-          ],
-          as: "user",
-        },
-      },
-      {
-        $lookup: {
-          from: "followers",
-          let: { followed_id: "$id_user", current_user_id: visitProfileDto.id_user },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$id_user_followed", "$$followed_id"] },
-                    { $eq: ["$id_user_follower", "$$current_user_id"] },
-                  ],
+              {
+                $project: {
+                  _id: 1,
+                  name: 1,
+                  email: 1,
+                  certificate: 1,
                 },
               },
-            },
-            {
-              $project: {
-                _id: 1,
-                id_user_follower: 1,
-                id_user_followed: 1,
-                acepted: 1,
-              },
-            },
-          ],
-          as: "follower_info",
+            ],
+            as: "user",
+          },
         },
-      },
-      {
-        $addFields: {
-          is_following: {
-            $cond: {
-              if: { $gt: [{ $size: "$follower_info" }, 0] },
-              then: true,
-              else: false,
+        {
+          $lookup: {
+            from: "followers",
+            let: { followed_id: "$id_user", current_user_id: visitProfileDto.id_user },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [{ $eq: ["$id_user_followed", "$$followed_id"] }, { $eq: ["$id_user_follower", "$$current_user_id"] }],
+                  },
+                },
+              },
+              {
+                $project: {
+                  _id: 1,
+                  id_user_follower: 1,
+                  id_user_followed: 1,
+                  acepted: 1,
+                },
+              },
+            ],
+            as: "follower_info",
+          },
+        },
+        {
+          $addFields: {
+            is_following: {
+              $cond: {
+                if: { $gt: [{ $size: "$follower_info" }, 0] },
+                then: true,
+                else: false,
+              },
             },
           },
         },
-      },
-      {
-        $unwind: "$user",
-      },
-      {
-        $project: {
-          _id: 1,
-          id_user: 1,
-          description: 1,
-          profile_picture: 1,
-          user_email: '$user.email',
-          user_name: '$user.name',
-          is_following: 1,
-          created_at: 1,
-          updated_at: 1,
-          deleted_at: 1,
+        {
+          $unwind: "$user",
         },
-      },
-    ]).exec();
-    
+        {
+          $project: {
+            _id: 1,
+            id_user: 1,
+            description: 1,
+            profile_picture: 1,
+            user_email: "$user.email",
+            user_name: "$user.name",
+            is_following: 1,
+            created_at: 1,
+            updated_at: 1,
+            deleted_at: 1,
+          },
+        },
+      ])
+      .exec();
+
     return visitedUserProfile[0];
   }
 
@@ -137,10 +136,10 @@ export class ProfileService {
   }
 
   async update(id: string, updateProfileDto: UpdateProfileDto): Promise<Profile> {
-    await this.findOneById(id);
-    return this.profileModel.findByIdAndUpdate(
+    await this.findOneByUserId(id);
+    await this.profileModel.updateOne(
       {
-        _id: id,
+        id_user: id,
       },
       {
         $set: updateProfileDto,
@@ -150,6 +149,7 @@ export class ProfileService {
         new: true,
       },
     );
+    return await this.findOneByUserId(id);
   }
 
   async remove(id: string): Promise<Profile> {
